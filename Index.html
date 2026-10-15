@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finança — Gestão Financeira Pessoal</title>
+
+  <!-- Tipografia Google Fonts (Plus Jakarta Sans & Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Ícones Font Awesome v6.4.0 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Chart.js v3+ para Gráficos Reativos em Canvas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Inclusão das Estilos embutidos no Google Apps Script -->
+  <?!= include('style'); ?>
+</head>
+<body class="dark-theme">
+
+ 
+  <!-- OVERLAY DE CARREGAMENTO GLOBAL (LOADER)-->
+  
+  <div id="global-loader" class="loader-overlay hidden">
+    <div class="spinner-container">
+      <div class="spinner"></div>
+      <p id="loader-text">Carregando dados...</p>
+    </div>
+  </div>
+
+  <div class="app-container">
+    
+   
+    <!-- SIDEBAR DE NAVEGAÇÃO LATERAL-->
+  
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <span class="logo-icon">F</span>
+          <span class="brand-name">Finança</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="#" class="nav-link active" data-target="view-dashboard">
+              <i class="fa-solid fa-border-all"></i>
+              <span class="nav-text">Dashboard</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-target="view-contas">
+              <i class="fa-solid fa-wallet"></i>
+              <span class="nav-text">Contas e Cartões</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-target="view-lancamentos">
+              <i class="fa-solid fa-receipt"></i>
+              <span class="nav-text">Lançamentos</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-target="view-metas">
+              <i class="fa-solid fa-bullseye"></i>
+              <span class="nav-text">Metas e Orçamentos</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-target="view-investimentos">
+              <i class="fa-solid fa-chart-line"></i>
+              <span class="nav-text">Investimentos</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <ul class="nav-list">
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-target="view-notificacoes">
+              <i class="fa-solid fa-bell"></i>
+              <span class="nav-text">Notificações</span>
+              <span class="badge badge-unread hidden" id="sidebar-notif-badge">0</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" data-target="view-configuracoes">
+              <i class="fa-solid fa-gear"></i>
+              <span class="nav-text">Configurações</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link toggle-sidebar-btn" id="btn-toggle-sidebar" title="Recolher menu">
+              <i class="fa-solid fa-chevron-left" id="sidebar-collapse-icon"></i>
+              <span class="nav-text">Recolher menu</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </aside>
+
+    
+    <!-- ÁREA PRINCIPAL DE CONTEÚDO (MAIN CONTENT)-->
+  
+    <main class="main-content">
+      
+      <!-- TOPBAR SUPERIOR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-menu-btn" id="btn-mobile-menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div class="page-title-container">
+            <h1 id="page-title">Dashboard</h1>
+            <p id="page-subtitle" class="page-subtitle">Acompanhe a visão geral das suas finanças</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="search-box">
+          </div>
+
+          <button class="icon-btn" id="topbar-notif-btn" data-target="view-notificacoes" title="Notificações">
+            <i class="fa-solid fa-bell"></i>
+            <span class="badge badge-unread hidden" id="topbar-notif-badge">0</span>
+          </button>
+
+          <div class="user-avatar" id="topbar-user-avatar" title="Perfil do Usuário">
+            <span id="user-avatar-initials">--</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- CONTEÚDO DAS VIEWS SPA -->
+      <div class="content-body">
+
+        
+        <!-- VIEW 1: DASHBOARD-->
+        
+        <section id="view-dashboard" class="view-section active">
+          
+          <!-- Cabeçalho de Boas-Vindas & Ação Principal -->
+          <div class="dashboard-welcome">
+            <div>
+              <h2 class="welcome-title">Olá, <span id="dash-user-name">Usuário</span> 👋</h2>
+              <p class="welcome-subtitle" id="dash-period-subtitle">Carregando informações financeiras...</p>
+            </div>
+            <button class="btn btn-primary btn-nova-transacao" data-modal="modal-transacao">
+              <i class="fa-solid fa-plus"></i> Nova Transação
+            </button>
+          </div>
+
+          <!-- Cards KPI Finanças -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Patrimônio Total</span>
+                <span class="kpi-icon icon-purple"><i class="fa-solid fa-chart-simple"></i></span>
+              </div>
+              <div class="kpi-value value-masked" id="kpi-patrimonio">R$ 0,00</div>
+              <div class="kpi-trend trend-neutral" id="kpi-patrimonio-trend">
+                <span>0.0% vs. mês anterior</span>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Receitas do Mês</span>
+                <span class="kpi-icon icon-green"><i class="fa-solid fa-arrow-trend-up"></i></span>
+              </div>
+              <div class="kpi-value value-masked" id="kpi-receitas">R$ 0,00</div>
+              <div class="kpi-trend trend-up" id="kpi-receitas-trend">
+                <span><i class="fa-solid fa-caret-up"></i> 0.0% vs. mês anterior</span>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Despesas do Mês</span>
+                <span class="kpi-icon icon-red"><i class="fa-solid fa-arrow-trend-down"></i></span>
+              </div>
+              <div class="kpi-value value-masked" id="kpi-despesas">R$ 0,00</div>
+              <div class="kpi-trend trend-down" id="kpi-despesas-trend">
+                <span><i class="fa-solid fa-caret-down"></i> 0.0% vs. mês anterior</span>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-header">
+                <span class="kpi-title">Balanço Mensal</span>
+                <span class="kpi-icon icon-blue"><i class="fa-solid fa-scale-balanced"></i></span>
+              </div>
+              <div class="kpi-value value-masked" id="kpi-balanco">R$ 0,00</div>
+              <div class="kpi-trend trend-up" id="kpi-balanco-trend">
+                <span><i class="fa-solid fa-caret-up"></i> 0.0% vs. mês anterior</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ações Rápidas -->
+          <div class="quick-actions-container">
+            <h3 class="section-subtitle">AÇÕES RÁPIDAS</h3>
+            <div class="quick-actions-buttons">
+              <button class="btn btn-secondary" data-modal="modal-transacao">
+                <i class="fa-solid fa-plus"></i> Nova Transação
+              </button>
+              <button class="btn btn-secondary" data-modal="modal-transferencia">
+                <i class="fa-solid fa-arrow-right-left"></i> Transferência
+              </button>
+              <button class="btn btn-secondary" data-modal="modal-cartao">
+                <i class="fa-solid fa-credit-card"></i> Novo Cartão
+              </button>
+              <button class="btn btn-secondary" data-modal="modal-importar">
+                <i class="fa-solid fa-upload"></i> Importar Extrato
+              </button>
+            </div>
+          </div>
+
+          <!-- Gráficos Principais -->
+          <div class="charts-grid">
+            <!-- Gráfico de Linha: Fluxo de Caixa -->
+            <div class="card chart-card">
+              <div class="chart-header">
+                <h3>Fluxo de Caixa</h3>
+                <div class="chart-period-selector">
+                  <button class="btn-period" data-period="3m">3m</button>
+                  <button class="btn-period active" data-period="6m">6m</button>
+                  <button class="btn-period" data-period="1a">1a</button>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="cashFlowChart"></canvas>
+              </div>
+              <div class="chart-legend">
+                <span class="legend-item"><span class="legend-dot dot-receitas"></span> Receitas</span>
+                <span class="legend-item"><span class="legend-dot dot-despesas"></span> Despesas</span>
+              </div>
+            </div>
+
+            <!-- Gráfico de Rosca: Despesas por Categoria -->
+            <div class="card chart-card">
+              <div class="chart-header">
+                <h3>Despesas por Categoria</h3>
+              </div>
+              <div class="chart-container doughnut-container">
+                <canvas id="categoryChart"></canvas>
+              </div>
+              <div class="category-legend-list" id="category-legend-list">
+                <!-- Inserido dinamicamente pelo JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Lançamentos Recentes & Teto de Gastos Resumido -->
+          <div class="dashboard-bottom-grid">
+            <!-- Tabela de Lançamentos Recentes -->
+            <div class="card dashboard-card-recent">
+              <div class="card-header-flex">
+                <h3>Transações Recentes</h3>
+                <a href="#" class="link-see-all nav-link-inline" data-target="view-lancamentos">Ver todas <i class="fa-solid fa-chevron-right"></i></a>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <tbody id="dash-recent-transactions-list">
+                    <!-- Registros inseridos dinamicamente -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Card Teto de Gastos Resumo -->
+            <div class="card dashboard-card-budget">
+              <div class="card-header-flex">
+                <h3 id="dash-budget-title">Teto de Gastos — Mês Vigente</h3>
+                <i class="fa-solid fa-chart-simple text-muted"></i>
+              </div>
+              <div class="budget-progress-list" id="dash-budget-progress-list">
+                <!-- Barras de progresso dinâmicas -->
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        
+        <!-- VIEW 2: CONTAS E CARTÕES-->
+        
+        <section id="view-contas" class="view-section">
+          
+          <div class="section-top-actions">
+            <div>
+              <p class="text-muted">Gerencie seus ativos e limites</p>
+            </div>
+            <button class="btn btn-secondary" id="btn-toggle-mask-privacy">
+              <i class="fa-solid fa-eye-slash"></i> Ocultar
+            </button>
+          </div>
+
+          <!-- Banner de Patrimônio Total -->
+          <div class="patrimonio-banner">
+            <span class="banner-title">Patrimônio Total</span>
+            <div class="banner-value value-masked" id="contas-patrimonio-total">R$ 0,00</div>
+            <span class="banner-subtitle" id="contas-ativas-count">0 contas ativas</span>
+          </div>
+
+          <!-- Seção de Minhas Contas -->
+          <div class="section-block">
+            <div class="section-block-header">
+              <h3>Minhas Contas</h3>
+              <button class="btn btn-text btn-add" data-modal="modal-conta">+ Nova conta</button>
+            </div>
+            <div class="accounts-grid" id="accounts-grid">
+              <!-- Cards de contas renderizados via JS -->
+            </div>
+          </div>
+
+          <!-- Seção de Cartões de Crédito -->
+          <div class="section-block">
+            <div class="section-block-header">
+              <h3>Cartões de Crédito</h3>
+              <button class="btn btn-text btn-add" data-modal="modal-cartao">+ Adicionar cartão</button>
+            </div>
+            <div class="cards-grid" id="cards-grid">
+              <!-- Cards estilizados renderizados via JS -->
+            </div>
+          </div>
+
+          <!-- Bloco Detalhes da Fatura Selecionada -->
+
+
+          <div class="card invoice-details-card" id="invoice-details-block">
+            <div class="card-header-flex">
+              <div>
+                <h3 id="invoice-card-name">Selecione um Cartão</h3>
+                <p class="text-muted" id="invoice-card-subtitle">Detalhes da fatura</p>
+              </div>
+              <!-- Botão transformado para alternar a exibição da fatura detalhada -->
+              <button class="btn-inline-link" id="btn-toggle-full-invoice" onclick="toggleFullInvoiceDetails()">
+                Ver fatura completa <i class="fa-solid fa-chevron-down" id="icon-toggle-invoice"></i>
+              </button>
+            </div>
+
+            <div class="invoice-metrics-grid">
+              <div class="metric-item">
+                <span class="metric-label">Limite Total</span>
+                <span class="metric-value value-masked" id="inv-limite-total">R$ 0,00</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Limite Usado</span>
+                <span class="metric-value value-masked text-danger" id="inv-limite-usado">R$ 0,00</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Disponível</span>
+                <span class="metric-value value-masked text-success" id="inv-limite-disponivel">R$ 0,00</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Vencimento</span>
+                <span class="metric-value" id="inv-vencimento">Dia --</span>
+              </div>
+            </div>
+
+            <!-- CONTAINER EXPANSÍVEL DA FATURA DETALHADA (INICIA OCULTO) -->
+            <div id="full-invoice-expanded-container" class="hidden" style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var         (--border-color);">
+              <div class="card-header-flex" style="margin-bottom: 1rem;">
+                <h4 style="font-size: 1rem;"><i class="fa-solid fa-receipt text-purple"></i> Itens da Fatura</h4>
+      
+                <!-- Seletor Dinâmico de Mês -->
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <label for="invoice-month-select" class="text-muted" style="font-size: 0.85rem;">Mês de referência:</label>
+                  <input type="month" id="invoice-month-select" class="form-control select-compact" style="padding: 0.35rem 0.65rem;"           onchange="onInvoiceMonthChange(this.value)">
+                </div>
+              </div>
+
+                <!-- Tabela de Itens Comprados -->
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Data Compra</th>
+                        <th>Parcela</th>
+                        <th class="text-right">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody id="invoice-items-table-body">
+                    <!-- Inserido dinamicamente via JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+        </section>
+
+        
+        <!-- VIEW 3: LANÇAMENTOS-->
+       
+        <section id="view-lancamentos" class="view-section">
+          
+          <div class="section-top-actions">
+            <div>
+              <p class="text-muted" id="transactions-count-label">0 transações encontradas</p>
+            </div>
+            <!-- Grupo de Botões: Categoria e Novo Lançamento -->
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-secondary" data-modal="modal-categoria">
+                <i class="fa-solid fa-tags"></i> + Categoria
+              </button>
+              <button class="btn btn-primary" data-modal="modal-transacao">
+                <i class="fa-solid fa-plus"></i> Novo
+              </button>
+            </div>
+          </div>
+
+          <!-- Painel de Filtros e Busca -->
+          <div class="card filter-panel">
+            <div class="filter-search-row">
+              <i class="fa-solid fa-magnifying-glass filter-icon"></i>
+              <input type="text" id="tx-search-input" placeholder="Buscar transações...">
+            </div>
+
+            <!-- Pílulas de Filtro (Pill Filters) -->
+            <div class="filter-pills-container">
+              <div class="filter-group">
+                <span class="filter-group-label"><i class="fa-solid fa-filter"></i> Origem:</span>
+                <button class="pill-btn active" data-filter-group="source" data-value="all">Todos</button>
+                <button class="pill-btn" data-filter-group="source" data-value="month">Mês Vigente</button>
+                <button class="pill-btn" data-filter-group="source" data-value="conta">Contas</button>
+                <button class="pill-btn" data-filter-group="source" data-value="cartao">Cartões</button>
+              </div>
+
+              <div class="filter-group">
+                <span class="filter-group-label">Tipo:</span>
+                <button class="pill-btn active" data-filter-group="type" data-value="all">Todos</button>
+                <button class="pill-btn" data-filter-group="type" data-value="Receita">Receita</button>
+                <button class="pill-btn" data-filter-group="type" data-value="Despesa">Despesa</button>
+                <button class="pill-btn" data-filter-group="type" data-value="Transferência">Transferência</button>
+              </div>
+
+              <div class="filter-group">
+                <span class="filter-group-label">Status:</span>
+                <button class="pill-btn active" data-filter-group="status" data-value="all">Todos</button>
+                <button class="pill-btn" data-filter-group="status" data-value="Pago">Pago</button>
+                <button class="pill-btn" data-filter-group="status" data-value="Pendente">Pendente</button>
+              </div>
+            </div>
+
+            <!-- Chips de Categorias -->
+            <div class="category-chips-scroll" id="category-chips-container">
+
+            </div>
+          </div>
+
+          <!-- Tabela Completa de Transações -->
+          <div class="card table-card">
+            <div class="table-responsive">
+              <table class="data-table full-table">
+                <thead>
+                  <tr>
+                    <th>Descrição</th>
+                    <th>Categoria</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                    <th class="text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="full-transactions-list">
+                  <!-- Registros filtrados renderizados dinamicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        
+        <!-- VIEW 4: METAS E ORÇAMENTOS-->
+       
+        <section id="view-metas" class="view-section">
+          
+          <div class="section-top-actions">
+            <div>
+              <p class="text-muted">Acompanhe seus objetivos e limites de gastos</p>
+            </div>
+          </div>
+
+          <!-- Bloco 1: Metas de Economia -->
+          <div class="section-block">
+            <div class="section-block-header">
+              <h3><i class="fa-solid fa-bullseye text-purple"></i> Metas de Economia</h3>
+              <button class="btn btn-text btn-add" data-modal="modal-meta">+ Nova meta</button>
+            </div>
+
+            <div class="goals-grid" id="goals-grid">
+              <!-- Cards de Metas renderizados via JS -->
+            </div>
+          </div>
+
+          <!-- Bloco 2: Teto de Gastos (Orçamentos por Categoria) -->
+          <div class="section-block">
+            <div class="section-block-header">
+              <h3 id="budget-block-title"><i class="fa-solid fa-chart-pie text-purple"></i> Teto de Gastos — Mês Vigente</h3>
+              <button class="btn btn-text btn-add" data-modal="modal-orcamento">+ Novo limite</button>
+            </div>
+
+            <!-- Banner Alerta se Alguma Categoria Ultrapassar 85% -->
+            <div class="alert-banner warning-banner hidden" id="budget-warning-banner">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <div>
+                <strong>Atenção: limites próximos do teto</strong>
+                <p id="budget-warning-text">Uma ou mais categorias estão acima de 85% do limite mensal definido.</p>
+              </div>
+            </div>
+
+            <div class="budgets-grid" id="budgets-grid">
+              <!-- Cards de Teto de Gastos renderizados via JS -->
+            </div>
+          </div>
+
+          <!-- Bloco 3: Resumo das Metas -->
+          <div class="card summary-goals-card">
+            <h3>Resumo das Metas</h3>
+            <div class="goals-summary-grid">
+              <div class="summary-item">
+                <i class="fa-solid fa-bullseye icon-summary text-purple"></i>
+                <span class="summary-value" id="summary-active-goals">0</span>
+                <span class="summary-label">Metas Ativas</span>
+              </div>
+              <div class="summary-item">
+                <i class="fa-solid fa-sack-dollar icon-summary text-green"></i>
+                <span class="summary-value value-masked" id="summary-total-accumulated">R$ 0,00</span>
+                <span class="summary-label">Total Acumulado</span>
+              </div>
+              <div class="summary-item">
+                <i class="fa-solid fa-chart-line icon-summary text-blue"></i>
+                <span class="summary-value" id="summary-avg-progress">0%</span>
+                <span class="summary-label">Progresso Médio</span>
+              </div>
+              <div class="summary-item">
+                <i class="fa-solid fa-laptop icon-summary text-orange"></i>
+                <span class="summary-value" id="summary-next-goal-name">--</span>
+                <span class="summary-label">Próxima Meta</span>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        
+        <!-- VIEW 5: INVESTIMENTOS (PLACEHOLDER)-->
+        
+        <section id="view-investimentos" class="view-section">
+          <div class="empty-placeholder-card">
+            <div class="placeholder-icon">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h2>Módulo de Investimentos</h2>
+            <p class="text-muted">Em breve — acompanhe sua carteira de ativos em tempo real.</p>
+          </div>
+        </section>
+
+        
+        <!-- VIEW 6: NOTIFICAÇÕES-->
+        
+        <section id="view-notificacoes" class="view-section">
+          
+          <div class="notifications-header">
+            <div>
+              <h2>Notificações</h2>
+              <p class="text-muted" id="notif-unread-count">0 não lidas</p>
+            </div>
+            <button class="btn btn-text text-purple" id="btn-mark-all-read">
+              <i class="fa-solid fa-check-double"></i> Marcar todas como lidas
+            </button>
+          </div>
+
+          <div class="notifications-list" id="notifications-container-list">
+            <!-- Renderizado dinamicamente pelo JS -->
+          </div>
+
+        </section>
+
+        
+        <!-- VIEW 7: CONFIGURAÇÕES-->
+        
+        <section id="view-configuracoes" class="view-section">
+          
+          <div class="settings-container">
+            <h2>Configurações</h2>
+            <p class="text-muted subtitle-margin">Personalize sua experiência</p>
+
+            <!-- Bloco 1: Perfil do Usuário -->
+            <div class="card settings-card">
+              <div class="profile-settings-flex">
+                <div class="user-avatar avatar-large" id="settings-avatar">
+                  <span id="settings-avatar-initials">--</span>
+                </div>
+                <div class="profile-info">
+                  <h3 id="settings-user-fullname">Carregando...</h3>
+                  <p class="text-muted" id="settings-user-email">email@exemplo.com</p>
+                  <button class="btn-inline-link" data-modal="modal-perfil">Editar perfil</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bloco 2: Aparência / Temas -->
+            <div class="card settings-card">
+              <span class="settings-section-title">APARÊNCIA</span>
+              <p class="settings-label-bold">Tema</p>
+              <div class="theme-selector-grid">
+                <button class="theme-btn" data-theme="Claro">
+                  <i class="fa-regular fa-sun"></i>
+                  <span>Claro</span>
+                </button>
+                <button class="theme-btn active" data-theme="Escuro">
+                  <i class="fa-regular fa-moon"></i>
+                  <span>Escuro</span>
+                </button>
+                <button class="theme-btn" data-theme="Sistema">
+                  <i class="fa-solid fa-desktop"></i>
+                  <span>Sistema</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Bloco 3: Região e Idioma -->
+            <div class="card settings-card">
+              <span class="settings-section-title">REGIÃO E IDIOMA</span>
+              <div class="settings-row">
+                <div class="settings-row-left">
+                  <i class="fa-solid fa-globe"></i>
+                  <span>Moeda</span>
+                </div>
+                <select class="form-control select-compact" id="settings-currency" disabled>
+                  <option value="BRL">BRL — Real Brasileiro</option>
+                </select>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-left">
+                  <i class="fa-solid fa-language"></i>
+                  <span>Idioma</span>
+                </div>
+                <select class="form-control select-compact" id="settings-language" disabled>
+                  <option value="PT-BR">Português (Brasil)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Bloco 4: Notificações Toggles -->
+            <div class="card settings-card">
+              <span class="settings-section-title">NOTIFICAÇÕES</span>
+              <div class="settings-toggle-row">
+                <div class="toggle-left">
+                  <i class="fa-solid fa-bell"></i>
+                  <span>Contas a vencer</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggle-notif-vencer" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="settings-toggle-row">
+                <div class="toggle-left">
+                  <i class="fa-solid fa-bell"></i>
+                  <span>Limite de gastos atingido</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggle-notif-limite" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="settings-toggle-row">
+                <div class="toggle-left">
+                  <i class="fa-solid fa-bell"></i>
+                  <span>Metas alcançadas</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggle-notif-metas" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="settings-toggle-row">
+                <div class="toggle-left">
+                  <i class="fa-solid fa-bell"></i>
+                  <span>Novos lançamentos</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggle-notif-lancamentos" checked>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Bloco 5: Segurança e Privacidade -->
+            <div class="card settings-card">
+              <span class="settings-section-title">SEGURANÇA E PRIVACIDADE</span>
+              <div class="settings-toggle-row">
+                <div class="toggle-left">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <span>Autenticação 2 Fatores (2FA)</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggle-2fa" checked disabled>
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="settings-toggle-row">
+                <div class="toggle-left">
+                  <i class="fa-solid fa-eye-slash"></i>
+                  <span>Ocultar saldos ao iniciar</span>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="toggle-hide-balances-start">
+                  <span class="slider round"></span>
+                </label>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-left">
+                  <i class="fa-solid fa-user-lock"></i>
+                  <span>Alterar senha</span>
+                </div>
+                <button class="btn-inline-link" onclick="alert('Autenticação é gerenciada diretamente pela sua Conta Google.')">Alterar <i class="fa-solid fa-arrow-right"></i></button>
+              </div>
+            </div>
+
+            <!-- Bloco 6: Categorias -->
+            <div class="card settings-card">
+              <span class="settings-section-title">CATEGORIAS</span>
+              <div class="settings-row">
+                <div class="settings-row-left">
+                  <i class="fa-solid fa-tags"></i>
+                  <span>Gerenciar categorias personalizadas</span>
+                </div>
+                <button class="btn-inline-link" data-modal="modal-orcamento">Editar <i class="fa-solid fa-arrow-right"></i></button>
+              </div>
+            </div>
+
+            <!-- Bloco 7: Zona de Perigo -->
+            <div class="card settings-card border-danger-zone">
+              <span class="settings-section-title text-danger">Zona de Perigo</span>
+              <div class="danger-buttons-flex">
+                <button class="btn btn-outline-danger" id="btn-export-data">Exportar todos os dados</button>
+                <button class="btn btn-outline-danger" id="btn-delete-account" onclick="alert('Sua conta está associada ao Google Sheets.')">Excluir conta</button>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+      </div> <!-- Fim de .content-body -->
+
+    </main>
+  </div> <!-- Fim de .app-container -->
+
+
+  
+  <!-- MODAIS DE INTERAÇÃO (MODAL DIALOGS)-->
+ 
+
+  <!-- 1. MODAL: NOVA TRANSAÇÃO / LANÇAMENTO -->
+  <div class="modal-backdrop hidden" id="modal-transacao">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Nova Transação</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-transacao">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="tx-descricao">Descrição</label>
+            <input type="text" id="tx-descricao" class="form-control" placeholder="Ex: Supermercado, Salário" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="tx-valor">Valor (R$)</label>
+              <input type="number" step="0.01" min="0.01" id="tx-valor" class="form-control" placeholder="0,00" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="tx-data">Data</label>
+              <input type="date" id="tx-data" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="tx-tipo">Tipo</label>
+              <select id="tx-tipo" class="form-control" required>
+                <option value="Despesa">Despesa</option>
+                <option value="Receita">Receita</option>
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label for="tx-categoria">Categoria</label>
+              <select id="tx-categoria" class="form-control" required>
+                
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="tx-origem">Origem (Conta Bancária ou Cartão)</label>
+            <select id="tx-origem" class="form-control" required>
+              <!-- Preenchido dinamicamente via JS -->
+            </select>
+          </div>
+
+          <!-- Campos Dinâmicos para Cartão de Crédito (Parcelamento) -->
+          <div id="tx-cartao-options" class="form-row hidden">
+            <div class="form-group col-6">
+              <label for="tx-parcelas">Parcelas</label>
+              <select id="tx-parcelas" class="form-control">
+                <option value="1">1x (À vista)</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+                <option value="5">5x</option>
+                <option value="6">6x</option>
+                <option value="10">10x</option>
+                <option value="12">12x</option>
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label for="tx-status-cartao">Status Parcela</label>
+              <input type="text" class="form-control" value="Pendente" disabled>
+            </div>
+          </div>
+
+          <!-- Campo de Status para Conta Bancária -->
+          <div id="tx-conta-options" class="form-group">
+            <label for="tx-status">Status de Pagamento</label>
+            <select id="tx-status" class="form-control">
+              <option value="Pago">Pago</option>
+              <option value="Pendente">Pendente</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Lançamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. MODAL: NOVA CONTA BANCÁRIA -->
+  <div class="modal-backdrop hidden" id="modal-conta">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Nova Conta Bancária</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-conta">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="acc-nome">Nome da Instituição / Conta</label>
+            <input type="text" id="acc-nome" class="form-control" placeholder="Ex: Nubank, Itaú, Carteira" required>
+          </div>
+
+          <div class="form-group">
+            <label for="acc-tipo">Tipo de Conta</label>
+            <select id="acc-tipo" class="form-control" required>
+              <option value="Conta Corrente">Conta Corrente</option>
+              <option value="Poupança">Poupança</option>
+              <option value="Carteira">Carteira (Dinheiro Físico)</option>
+              <option value="Investimentos">Investimentos</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="acc-saldo">Saldo Inicial (R$)</label>
+            <input type="number" step="0.01" id="acc-saldo" class="form-control" placeholder="0,00" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Criar Conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. MODAL: NOVO CARTÃO DE CRÉDITO -->
+  <div class="modal-backdrop hidden" id="modal-cartao">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Novo Cartão de Crédito</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-cartao">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="card-nome">Nome do Cartão</label>
+            <input type="text" id="card-nome" class="form-control" placeholder="Ex: Nubank Ultravioleta, Itaú Personnalité" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="card-digitos">Últimos 4 dígitos</label>
+              <input type="text" maxlength="4" id="card-digitos" class="form-control" placeholder="4821" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="card-limite">Limite Total (R$)</label>
+              <input type="number" step="0.01" min="1" id="card-limite" class="form-control" placeholder="5000,00" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="card-fechamento">Dia de Fechamento</label>
+              <input type="number" min="1" max="31" id="card-fechamento" class="form-control" placeholder="12" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="card-vencimento">Dia de Vencimento</label>
+              <input type="number" min="1" max="31" id="card-vencimento" class="form-control" placeholder="19" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="card-estilo">Estilo Visual / Cor</label>
+            <select id="card-estilo" class="form-control">
+              <option value="card-purple">Roxo Gradient (Ultravioleta)</option>
+              <option value="card-blue">Azul Personnalité</option>
+              <option value="card-dark">Grafite Carbon</option>
+              <option value="card-orange">Laranja Inter</option>
+              <option value="card-green">Verde XP</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Adicionar Cartão</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. MODAL: TRANSFERÊNCIA ENTRE CONTAS -->
+  <div class="modal-backdrop hidden" id="modal-transferencia">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Transferência entre Contas</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-transferencia">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="transf-origem">Conta de Origem</label>
+            <select id="transf-origem" class="form-control" required>
+              <!-- Preenchido via JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="transf-destino">Conta de Destino</label>
+            <select id="transf-destino" class="form-control" required>
+              <!-- Preenchido via JS -->
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="transf-valor">Valor (R$)</label>
+              <input type="number" step="0.01" min="0.01" id="transf-valor" class="form-control" placeholder="0,00" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="transf-data">Data</label>
+              <input type="date" id="transf-data" class="form-control" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Realizar Transferência</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 5. MODAL: NOVA META DE ECONOMIA -->
+  <div class="modal-backdrop hidden" id="modal-meta">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Nova Meta de Economia</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-meta">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="meta-titulo">Título da Meta</label>
+            <input type="text" id="meta-titulo" class="form-control" placeholder="Ex: Reserva de Emergência, Viagem" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="meta-alvo">Valor Alvo (R$)</label>
+              <input type="number" step="0.01" min="1" id="meta-alvo" class="form-control" placeholder="30000,00" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="meta-data-alvo">Data Alvo</label>
+              <input type="date" id="meta-data-alvo" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="meta-acumulado-inicial">Acumulado Inicial (R$)</label>
+            <input type="number" step="0.01" min="0" id="meta-acumulado-inicial" class="form-control" value="0.00">
+          </div>
+
+          <div class="form-group hidden" id="group-meta-conta-origem">
+            <label for="meta-conta-origem">Debitar Valor Inicial da Conta</label>
+            <select id="meta-conta-origem" class="form-control">
+              <!-- Preenchido via JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Criar Meta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 6. MODAL: DEPOSITAR / APORTAR EM META -->
+  <div class="modal-backdrop hidden" id="modal-depositar">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Aporte em Meta</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-depositar">
+        <input type="hidden" id="deposito-meta-id">
+        <div class="modal-body">
+          <p class="text-muted" id="deposito-meta-title-label">Meta: --</p>
+
+          <div class="form-group">
+            <label for="deposito-conta-origem">Retirar dinheiro da Conta</label>
+            <select id="deposito-conta-origem" class="form-control" required>
+              <!-- Preenchido via JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="deposito-valor">Valor do Aporte (R$)</label>
+            <input type="number" step="0.01" min="0.01" id="deposito-valor" class="form-control" placeholder="500,00" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Confirmar Aporte</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 7. MODAL: EXCLUIR META COM REEMBOLSO -->
+  <div class="modal-backdrop hidden" id="modal-excluir-meta">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="text-danger">Excluir Meta</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-excluir-meta">
+        <input type="hidden" id="excluir-meta-id">
+        <input type="hidden" id="excluir-meta-acumulado">
+        <div class="modal-body">
+          <p id="excluir-meta-confirm-text">Tem certeza que deseja excluir esta meta?</p>
+
+          <div id="group-reembolso-meta" class="form-group hidden">
+            <label for="excluir-meta-conta-reembolso" class="text-warning">Escolha a conta para receber o REEMBOLSO do saldo acumulado:</label>
+            <select id="excluir-meta-conta-reembolso" class="form-control">
+              <!-- Preenchido via JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 8. MODAL: NOVO TETO DE GASTOS / ORÇAMENTO -->
+  <div class="modal-backdrop hidden" id="modal-orcamento">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Definir Teto de Gastos</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-orcamento">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="orc-categoria">Categoria</label>
+            <select id="orc-categoria" class="form-control" required>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="orc-limite">Limite Mensal (R$)</label>
+            <input type="number" step="0.01" min="1" id="orc-limite" class="form-control" placeholder="1500,00" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Limite</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 9. MODAL: EXCLUIR TETO DE GASTOS -->
+  <div class="modal-backdrop hidden" id="modal-excluir-orcamento">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="text-danger">Excluir Teto de Gastos</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-excluir-orcamento">
+        <input type="hidden" id="excluir-orcamento-id">
+        <div class="modal-body">
+          <p id="excluir-orcamento-confirm-text">Tem certeza que deseja remover este teto de gastos?</p>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-danger">Excluir Limite</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 10. MODAL: EDITAR PERFIL DO USUÁRIO -->
+  <div class="modal-backdrop hidden" id="modal-perfil">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Editar Perfil</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-perfil">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="perfil-nome">Nome</label>
+              <input type="text" id="perfil-nome" class="form-control" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="perfil-sobrenome">Sobrenome</label>
+              <input type="text" id="perfil-sobrenome" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="perfil-email">E-mail</label>
+            <input type="email" id="perfil-email" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Perfil</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 11. MODAL: IMPORTAR EXTRATO (DROPZONE) -->
+  <div class="modal-backdrop hidden" id="modal-importar">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Importar Extrato Bancário</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="dropzone-container" id="dropzone-file">
+          <i class="fa-solid fa-cloud-arrow-up dropzone-icon"></i>
+          <p>Arraste e solte seu arquivo .OFX ou .CSV aqui</p>
+          <span class="text-muted">ou clique para navegar no seu computador</span>
+          <input type="file" id="import-file-input" class="hidden" accept=".ofx,.csv,.txt">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal>Fechar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 12 MODAL: PAGAMENTO DE FATURA DE CARTÃO -->
+  <div class="modal-backdrop hidden" id="modal-pagar-fatura">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Pagar Fatura de Cartão</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-pagar-fatura">
+        <input type="hidden" id="pay-invoice-tx-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Fatura Consolidada</label>
+            <input type="text" id="pay-invoice-desc" class="form-control" readonly>
+          </div>
+          <div class="form-group">
+            <label>Valor Total (R$)</label>
+            <input type="number" step="0.01" id="pay-invoice-valor" class="form-control" readonly>
+          </div>
+          <div class="form-group">
+            <label for="pay-invoice-conta">Debitar da Conta Bancária</label>
+            <select id="pay-invoice-conta" class="form-control" required>
+              <!-- Opções de contas carregadas dinamicamente -->
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Confirmar Pagamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 13 MODAL: NOVA CATEGORIA -->
+  <div class="modal-backdrop hidden" id="modal-categoria">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Nova Categoria</h3>
+        <button class="modal-close-btn" data-close-modal>&times;</button>
+      </div>
+      <form id="form-categoria" onsubmit="return false;">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="cat-nome">Nome da Categoria</label>
+            <input type="text" id="cat-nome" class="form-control" placeholder="Ex: Vestuário, Pets, Assinaturas" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancelar</button>
+          <button type="submit" class="btn btn-primary" onclick="salvarNovaCategoria()">Salvar Categoria</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Inclusão do JavaScript Principal da Aplicação -->
+  <?!= include('app'); ?>
+</body>
+</html>
