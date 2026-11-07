@@ -140,16 +140,16 @@ function addCategory(p) {
 function getUserProfile() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEETS.USUARIO);
   const data = sheet.getDataRange().getValues();
-  if (data.length < 2) return { name: 'Jhon', fullname: 'Jhon Doe', email: 'usuario@exemplo.com', theme: 'Escuro', hideBalances: false };
+  if (data.length < 2) return { name: 'Pedro', fullname: 'Pedro Simão', email: 'usuario@exemplo.com', theme: 'Escuro', hideBalances: false };
 
   const row = data[1];
-  const fullname = row[1] || 'Jhon Doe';
+  const fullname = row[1] || 'Pedro Simão';
   const nameParts = fullname.trim().split(' ');
 
   return {
     id: row[0],
     fullname: fullname,
-    name: nameParts[0] || 'Jhon',
+    name: nameParts[0] || 'Pedro',
     email: row[2] || '',
     theme: row[3] || 'Escuro',
     hideBalances: row[4] === 'Sim'

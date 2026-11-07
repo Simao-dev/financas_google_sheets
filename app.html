@@ -2,8 +2,8 @@
 
   const AppState = {
     userProfile: {
-      name: 'Jhon',
-      fullname: 'Jhon Doe',
+      name: 'Pedro',
+      fullname: 'Pedro Soares',
       email: 'usuario@exemplo.com',
       theme: 'Escuro',
       hideBalances: false
@@ -14,7 +14,7 @@
     goals: [],
     budgets: [],
     notifications: [],
-    
+
     filters: {
       search: '',
       source: 'all',
@@ -28,22 +28,24 @@
       category: null
     },
 
+    cashFlowPeriod: '6m',
+
     selectedCardId: null
   };
 
   document.addEventListener('DOMContentLoaded', () => {
-    initApp(false); 
+    initApp(false);
     setupEventListeners();
   });
 
-  
-   //Inicializa e atualiza os dados da aplicação
- 
+
+  //Inicializa e atualiza os dados da aplicação
+
   function initApp(showLoaderOverlay = false) {
     if (showLoaderOverlay) {
       showLoader('A processar...');
     }
-    
+
     if (typeof google !== 'undefined' && google.script && google.script.run) {
       google.script.run
         .withSuccessHandler(onInitialDataLoaded)
@@ -56,268 +58,278 @@
     }
   }
 
-function onInitialDataLoaded(data) {
-  hideLoader();
-  if (!data) return;
+  function onInitialDataLoaded(data) {
+    hideLoader();
+    if (!data) return;
 
-  //  Mapeamento de todos os dados do Backend no Estado Global
-  AppState.userProfile = data.userProfile || AppState.userProfile;
-  AppState.accounts = data.accounts || [];
-  AppState.cards = data.cards || [];
-  AppState.transactions = data.transactions || [];
-  AppState.goals = data.goals || [];
-  AppState.budgets = data.budgets || [];
-  AppState.notifications = data.notifications || [];
-  
-  // Captura as categorias vindas da aba Categorias do Sheets
-  AppState.categories = data.categories || [];
+    //  Mapeamento de todos os dados do Backend no Estado Global
+    AppState.userProfile = data.userProfile || AppState.userProfile;
+    AppState.accounts = data.accounts || [];
+    AppState.cards = data.cards || [];
+    AppState.transactions = data.transactions || [];
+    AppState.goals = data.goals || [];
+    AppState.budgets = data.budgets || [];
+    AppState.notifications = data.notifications || [];
 
-  if (AppState.cards.length > 0 && !AppState.selectedCardId) {
-    AppState.selectedCardId = AppState.cards[0].id;
+    // Captura as categorias vindas da aba Categorias do Sheets
+    AppState.categories = data.categories || [];
+
+    if (AppState.cards.length > 0 && !AppState.selectedCardId) {
+      AppState.selectedCardId = AppState.cards[0].id;
+    }
+
+    // Aplicação de preferências de Tema e Privacidade
+    applyTheme(AppState.userProfile.theme || 'Escuro');
+    setPrivacyMask(AppState.userProfile.hideBalances, false);
+
+    // Renderização reativa de toda a Interface
+    updateUserProfileUI();
+
+    // Preenche dinamicamente os selects dos modais e chips da tela de Lançamentos
+    renderCategorySelectsAndChips();
+
+    renderDashboard();
+    renderAccountsAndCards();
+    renderTransactionsTable();
+    renderGoalsAndBudgets();
+    renderNotifications();
+    updateOptionsSelects();
   }
 
-  // Aplicação de preferências de Tema e Privacidade
-  applyTheme(AppState.userProfile.theme || 'Escuro');
-  setPrivacyMask(AppState.userProfile.hideBalances, false);
 
-  // Renderização reativa de toda a Interface
-  updateUserProfileUI();
-  
-  // Preenche dinamicamente os selects dos modais e chips da tela de Lançamentos
-  renderCategorySelectsAndChips(); 
-  
-  renderDashboard();
-  renderAccountsAndCards();
-  renderTransactionsTable();
-  renderGoalsAndBudgets();
-  renderNotifications();
-  updateOptionsSelects();
-}
+  function renderCategorySelectsAndChips() {
+    const categoriesList = AppState.categories.map(c => c.nome);
 
+    // Garantia de ter fallback se estiver vazio
+    if (categoriesList.length === 0) {
+      categoriesList.push('Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Streaming', 'Educação', 'Salário', 'Freelance', 'Lazer', 'Contas', 'Outros');
+    }
 
-function renderCategorySelectsAndChips() {
-  const categoriesList = AppState.categories.map(c => c.nome);
-  
-  // Garantia de ter fallback se estiver vazio
-  if (categoriesList.length === 0) {
-    categoriesList.push('Alimentação', 'Moradia', 'Transporte', 'Saúde', 'Streaming', 'Educação', 'Salário', 'Freelance', 'Lazer', 'Contas', 'Outros');
-  }
+    //  Atualiza o <select> do Modal de Transação
+    const selectTxCat = document.getElementById('tx-categoria');
+    if (selectTxCat) {
+      selectTxCat.innerHTML = categoriesList.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    }
 
-  //  Atualiza o <select> do Modal de Transação
-  const selectTxCat = document.getElementById('tx-categoria');
-  if (selectTxCat) {
-    selectTxCat.innerHTML = categoriesList.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-  }
+    // Atualiza o <select> do Modal de Teto de Gastos (Orçamentos)
+    const selectOrcCat = document.getElementById('orc-categoria');
+    if (selectOrcCat) {
+      selectOrcCat.innerHTML = categoriesList.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+    }
 
-  // Atualiza o <select> do Modal de Teto de Gastos (Orçamentos)
-  const selectOrcCat = document.getElementById('orc-categoria');
-  if (selectOrcCat) {
-    selectOrcCat.innerHTML = categoriesList.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-  }
+    // Atualiza os Chips da Tela de Lançamentos
+    const chipsContainer = document.getElementById('category-chips-container');
+    if (chipsContainer) {
+      const activeCat = AppState.filters.category || 'all';
 
-  // Atualiza os Chips da Tela de Lançamentos
-  const chipsContainer = document.getElementById('category-chips-container');
-  if (chipsContainer) {
-    const activeCat = AppState.filters.category || 'all';
-    
-    let html = `<button class="chip-btn ${activeCat === 'all' ? 'active' : ''}" data-category="all">Todas</button>`;
-    
-    html += categoriesList.map(cat => `
+      let html = `<button class="chip-btn ${activeCat === 'all' ? 'active' : ''}" data-category="all">Todas</button>`;
+
+      html += categoriesList.map(cat => `
       <button class="chip-btn ${activeCat === cat ? 'active' : ''}" data-category="${cat}">${cat}</button>
     `).join('');
 
-    chipsContainer.innerHTML = html;
+      chipsContainer.innerHTML = html;
 
-    // Recarrega os event listeners nos novos botões gerados
-    chipsContainer.querySelectorAll('.chip-btn').forEach(btn => {
+      // Recarrega os event listeners nos novos botões gerados
+      chipsContainer.querySelectorAll('.chip-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const cat = btn.getAttribute('data-category');
+          chipsContainer.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          AppState.filters.category = cat;
+          renderTransactionsTable();
+        });
+      });
+    }
+  }
+
+  function salvarNovaCategoria() {
+    const inputNome = document.getElementById('cat-nome');
+    const nome = inputNome ? inputNome.value.trim() : '';
+
+    if (!nome) {
+      alert('Por favor, informe o nome da categoria.');
+      return;
+    }
+
+    showLoader('A guardar categoria...');
+
+    executeServerCall('addCategory', { nome }, (res) => {
+      //  Limpa o campo do formulário
+      if (inputNome) inputNome.value = '';
+
+
+      closeModal();
+
+      //  Atualiza os dados da aplicação e re-renderiza os selects/chips
+      initApp(false);
+    });
+  }
+
+
+
+
+  // Configura os ouvintes de eventos da interface e navegação
+
+  function setupEventListeners() {
+    // 1. Navegação de Views da Sidebar
+    document.querySelectorAll('[data-target]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetViewId = link.getAttribute('data-target');
+        navigateToView(targetViewId);
+
+        // No mobile, fecha a gaveta automaticamente ao escolher um item
+        if (window.innerWidth <= 768) {
+          const sidebar = document.getElementById('sidebar');
+          sidebar.classList.remove('mobile-open');
+          sidebar.classList.remove('collapsed');
+        }
+      });
+    });
+
+    //  Redirecionamento ao clicar no Avatar do Topo
+    const avatarBtn = document.getElementById('topbar-user-avatar');
+    if (avatarBtn) {
+      avatarBtn.addEventListener('click', () => {
+        navigateToView('view-configuracoes');
+      });
+    }
+
+    //  Botão "Recolher menu" (Footer da Sidebar)
+    const toggleSidebarBtn = document.getElementById('btn-toggle-sidebar');
+    if (toggleSidebarBtn) {
+      toggleSidebarBtn.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+
+        // Se estiver no mobile, recolhe deslizando para fora da tela
+        if (window.innerWidth <= 768) {
+          sidebar.classList.remove('mobile-open');
+          sidebar.classList.remove('collapsed');
+        } else {
+          // No desktop, aplica o encolhimento lateral (80px)
+          sidebar.classList.toggle('collapsed');
+        }
+      });
+    }
+
+
+    const mobileMenuBtn = document.getElementById('btn-mobile-menu');
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('mobile-open');
+      });
+    }
+
+    // Abertura e Fechamento de Modais
+    document.querySelectorAll('[data-modal]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const modalId = btn.getAttribute('data-modal');
+        openModal(modalId);
+      });
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+      btn.addEventListener('click', closeModal);
+    });
+
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) closeModal();
+      });
+    });
+
+    //  Exibição Dinâmica do Campo de Parcelas no Modal de Transação
+    const selectOrigem = document.getElementById('tx-origem');
+    if (selectOrigem) {
+      selectOrigem.addEventListener('change', (e) => {
+        const val = e.target.value;
+        const isCard = AppState.cards.some(c => c.nome === val);
+        const optionsCartao = document.getElementById('tx-cartao-options');
+        const optionsConta = document.getElementById('tx-conta-options');
+
+        if (isCard) {
+          optionsCartao.classList.remove('hidden');
+          optionsConta.classList.add('hidden');
+        } else {
+          optionsCartao.classList.add('hidden');
+          optionsConta.classList.remove('hidden');
+        }
+      });
+    }
+
+    //  Toggle de Privacidade de Saldos
+    const btnToggleMask = document.getElementById('btn-toggle-mask-privacy');
+    if (btnToggleMask) {
+      btnToggleMask.addEventListener('click', () => {
+        setPrivacyMask(!AppState.userProfile.hideBalances, true);
+      });
+    }
+
+    const toggleStartMask = document.getElementById('toggle-hide-balances-start');
+    if (toggleStartMask) {
+      toggleStartMask.addEventListener('change', (e) => {
+        setPrivacyMask(e.target.checked, true);
+      });
+    }
+
+    // Seleção de Tema
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const theme = btn.getAttribute('data-theme');
+        applyTheme(theme);
+        saveThemePreference(theme);
+      });
+    });
+
+    // Pesquisas e Filtros
+    const txSearchInput = document.getElementById('tx-search-input');
+    if (txSearchInput) {
+      txSearchInput.addEventListener('input', (e) => {
+        AppState.filters.search = e.target.value.toLowerCase().trim();
+        renderTransactionsTable();
+      });
+    }
+
+    document.querySelectorAll('.pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const group = btn.getAttribute('data-filter-group');
+        const value = btn.getAttribute('data-value');
+
+        document.querySelectorAll(`.pill-btn[data-filter-group="${group}"]`).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        AppState.filters[group] = value;
+        renderTransactionsTable();
+      });
+    });
+
+    document.querySelectorAll('.chip-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const cat = btn.getAttribute('data-category');
-        chipsContainer.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
         AppState.filters.category = cat;
         renderTransactionsTable();
       });
     });
+
+    document.querySelectorAll('.btn-period').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const period = btn.getAttribute('data-period');
+        document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        AppState.cashFlowPeriod = period;
+        renderCashFlowChart(period);
+      });
+    });
+
+    setupFormsSubmissions();
   }
-}
-
-function salvarNovaCategoria() {
-  const inputNome = document.getElementById('cat-nome');
-  const nome = inputNome ? inputNome.value.trim() : '';
-
-  if (!nome) {
-    alert('Por favor, informe o nome da categoria.');
-    return;
-  }
-
-  showLoader('A guardar categoria...');
-
-  executeServerCall('addCategory', { nome }, (res) => {
-    //  Limpa o campo do formulário
-    if (inputNome) inputNome.value = '';
-
-  
-    closeModal();
-
-    //  Atualiza os dados da aplicação e re-renderiza os selects/chips
-    initApp(false);
-  });
-}
-
-
-
-
- // Configura os ouvintes de eventos da interface e navegação
-
-function setupEventListeners() {
-  // 1. Navegação de Views da Sidebar
-  document.querySelectorAll('[data-target]').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const targetViewId = link.getAttribute('data-target');
-      navigateToView(targetViewId);
-
-      // No mobile, fecha a gaveta automaticamente ao escolher um item
-      if (window.innerWidth <= 768) {
-        const sidebar = document.getElementById('sidebar');
-        sidebar.classList.remove('mobile-open');
-        sidebar.classList.remove('collapsed');
-      }
-    });
-  });
-
-  //  Redirecionamento ao clicar no Avatar do Topo
-  const avatarBtn = document.getElementById('topbar-user-avatar');
-  if (avatarBtn) {
-    avatarBtn.addEventListener('click', () => {
-      navigateToView('view-configuracoes');
-    });
-  }
-
-  //  Botão "Recolher menu" (Footer da Sidebar)
-  const toggleSidebarBtn = document.getElementById('btn-toggle-sidebar');
-  if (toggleSidebarBtn) {
-    toggleSidebarBtn.addEventListener('click', () => {
-      const sidebar = document.getElementById('sidebar');
-      
-      // Se estiver no mobile, recolhe deslizando para fora da tela
-      if (window.innerWidth <= 768) {
-        sidebar.classList.remove('mobile-open');
-        sidebar.classList.remove('collapsed');
-      } else {
-        // No desktop, aplica o encolhimento lateral (80px)
-        sidebar.classList.toggle('collapsed');
-      }
-    });
-  }
-
-  
-  const mobileMenuBtn = document.getElementById('btn-mobile-menu');
-  if (mobileMenuBtn) {
-    mobileMenuBtn.addEventListener('click', () => {
-      const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('mobile-open');
-    });
-  }
-
-  // Abertura e Fechamento de Modais
-  document.querySelectorAll('[data-modal]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const modalId = btn.getAttribute('data-modal');
-      openModal(modalId);
-    });
-  });
-
-  document.querySelectorAll('[data-close-modal]').forEach(btn => {
-    btn.addEventListener('click', closeModal);
-  });
-
-  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) closeModal();
-    });
-  });
-
-  //  Exibição Dinâmica do Campo de Parcelas no Modal de Transação
-  const selectOrigem = document.getElementById('tx-origem');
-  if (selectOrigem) {
-    selectOrigem.addEventListener('change', (e) => {
-      const val = e.target.value;
-      const isCard = AppState.cards.some(c => c.nome === val);
-      const optionsCartao = document.getElementById('tx-cartao-options');
-      const optionsConta = document.getElementById('tx-conta-options');
-
-      if (isCard) {
-        optionsCartao.classList.remove('hidden');
-        optionsConta.classList.add('hidden');
-      } else {
-        optionsCartao.classList.add('hidden');
-        optionsConta.classList.remove('hidden');
-      }
-    });
-  }
-
-  //  Toggle de Privacidade de Saldos
-  const btnToggleMask = document.getElementById('btn-toggle-mask-privacy');
-  if (btnToggleMask) {
-    btnToggleMask.addEventListener('click', () => {
-      setPrivacyMask(!AppState.userProfile.hideBalances, true);
-    });
-  }
-
-  const toggleStartMask = document.getElementById('toggle-hide-balances-start');
-  if (toggleStartMask) {
-    toggleStartMask.addEventListener('change', (e) => {
-      setPrivacyMask(e.target.checked, true);
-    });
-  }
-
-  // Seleção de Tema
-  document.querySelectorAll('.theme-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const theme = btn.getAttribute('data-theme');
-      applyTheme(theme);
-      saveThemePreference(theme);
-    });
-  });
-
-  // Pesquisas e Filtros
-  const txSearchInput = document.getElementById('tx-search-input');
-  if (txSearchInput) {
-    txSearchInput.addEventListener('input', (e) => {
-      AppState.filters.search = e.target.value.toLowerCase().trim();
-      renderTransactionsTable();
-    });
-  }
-
-  document.querySelectorAll('.pill-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const group = btn.getAttribute('data-filter-group');
-      const value = btn.getAttribute('data-value');
-
-      document.querySelectorAll(`.pill-btn[data-filter-group="${group}"]`).forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      AppState.filters[group] = value;
-      renderTransactionsTable();
-    });
-  });
-
-  document.querySelectorAll('.chip-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cat = btn.getAttribute('data-category');
-      document.querySelectorAll('.chip-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      AppState.filters.category = cat;
-      renderTransactionsTable();
-    });
-  });
-
-  setupFormsSubmissions();
-}
 
   function navigateToView(viewId) {
     document.querySelectorAll('.view-section').forEach(view => view.classList.remove('active'));
@@ -358,32 +370,63 @@ function setupEventListeners() {
     document.getElementById('kpi-patrimonio').innerText = formatCurrency(totals.patrimonio);
     document.getElementById('kpi-receitas').innerText = formatCurrency(totals.receitas);
     document.getElementById('kpi-despesas').innerText = formatCurrency(totals.despesas);
-    document.getElementById('kpi-balanco').innerText = formatCurrency(totals.balanco);
+    document.getElementById('kpi-balanco').innerText = formatCurrency(totals.despesasCartao);
+
+    const balancoTitle = document.querySelector('#kpi-balanco')?.closest('.kpi-card')?.querySelector('.kpi-title');
+    if (balancoTitle) {
+      balancoTitle.innerText = 'Despesas Cartão';
+    }
+
+    renderKpiTrend('kpi-receitas-trend', totals.receitasTrend);
+    renderKpiTrend('kpi-despesas-trend', totals.despesasTrend, true);
+    renderKpiTrend('kpi-balanco-trend', totals.despesasCartaoTrend, true);
 
     const dateNow = new Date();
+    const periodText = `${String(dateNow.getMonth() + 1).padStart(2, '0')}/${dateNow.getFullYear()}`;
+    const elRecPeriod = document.getElementById('kpi-receitas-period');
+    const elDespPeriod = document.getElementById('kpi-despesas-period');
+    const elCardPeriod = document.getElementById('kpi-balanco-period');
+    if (elRecPeriod) elRecPeriod.innerText = periodText;
+    if (elDespPeriod) elDespPeriod.innerText = periodText;
+    if (elCardPeriod) elCardPeriod.innerText = periodText;
+
     const monthName = dateNow.toLocaleString('pt-BR', { month: 'long' });
     const fullMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
     document.getElementById('dash-period-subtitle').innerText = `${fullMonthName} ${dateNow.getFullYear()} · Sua saúde financeira está em dia`;
 
-    renderCashFlowChart();
+    renderCashFlowChart(AppState.cashFlowPeriod || '6m');
     renderCategoryChart();
     renderRecentTransactionsDashboard();
     renderDashboardBudgets();
   }
 
-  function renderCashFlowChart() {
+  function renderKpiTrend(elementId, percent, invertColor = false) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    const isPositive = percent >= 0;
+    const isGood = invertColor ? percent <= 0 : isPositive;
+    el.className = `kpi-trend ${isGood ? 'trend-up' : 'trend-down'}`;
+    const icon = isPositive ? 'fa-caret-up' : 'fa-caret-down';
+    el.innerHTML = `<span><i class="fa-solid ${icon}"></i> ${Math.abs(percent).toFixed(2)}% vs. mês anterior</span>`;
+  }
+
+  function renderCashFlowChart(period = AppState.cashFlowPeriod || '6m') {
     const ctx = document.getElementById('cashFlowChart');
     if (!ctx) return;
 
     if (AppState.charts.cashFlow) AppState.charts.cashFlow.destroy();
 
+    const periodMap = { '3m': 3, '6m': 6, '1a': 12 };
+    const periodMonths = periodMap[period] || 6;
+
     const months = [];
     const receitasData = [];
     const despesasData = [];
 
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
+    const now = new Date();
+    for (let i = periodMonths - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const mLabel = d.toLocaleString('pt-BR', { month: 'short' });
       months.push(mLabel.charAt(0).toUpperCase() + mLabel.slice(1, 3));
 
@@ -391,10 +434,20 @@ function setupEventListeners() {
       let mDesp = 0;
 
       AppState.transactions.forEach(tx => {
-        const txDate = new Date(tx.data);
-        if (txDate.getMonth() === d.getMonth() && txDate.getFullYear() === d.getFullYear()) {
-          if (tx.tipo === 'Receita') mRec += Number(tx.valor || 0);
-          if (tx.tipo === 'Despesa') mDesp += Number(tx.valor || 0);
+        if (tx.sourceType === 'cartao_parcela') return;
+
+        const parts = (tx.data || '').split('T')[0].split('-');
+        if (parts.length >= 3) {
+          const txYear = parseInt(parts[0], 10);
+          const txMonth = parseInt(parts[1], 10) - 1;
+
+          if (txMonth === d.getMonth() && txYear === d.getFullYear()) {
+            if (tx.tipo === 'Receita') {
+              mRec += Number(tx.valor || 0);
+            } else if (tx.tipo === 'Despesa' && tx.status === 'Pago') {
+              mDesp += Number(tx.valor || 0);
+            }
+          }
         }
       });
 
@@ -424,95 +477,95 @@ function setupEventListeners() {
   }
 
   function renderCategoryChart() {
-  const ctx = document.getElementById('categoryChart');
-  if (!ctx) return;
+    const ctx = document.getElementById('categoryChart');
+    if (!ctx) return;
 
-  if (AppState.charts.category) {
-    AppState.charts.category.destroy();
-  }
-
-  const catTotals = {};
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
-  //  Percorre todas as transações (Conta + Cartão de Crédito)
-  AppState.transactions.forEach(tx => {
-    // Apenas Despesas
-    if (tx.tipo !== 'Despesa') return;
-
-    // Ignora a linha consolidada do cartão para não duplicar valores
-    if (tx.sourceType === 'cartao_consolidado') return;
-
-    // Converte a data garantindo o fuso horário correto (T00:00:00)
-    const dateStr = tx.data ? tx.data.split('T')[0] : '';
-    if (!dateStr) return;
-
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const txDate = new Date(y, m - 1, d);
-
-    // Valida se pertence ao Mês e Ano Vigente
-    if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
-      const cat = tx.categoria || 'Outros';
-      catTotals[cat] = (catTotals[cat] || 0) + Number(tx.valor || 0);
+    if (AppState.charts.category) {
+      AppState.charts.category.destroy();
     }
-  });
 
-  const categories = Object.keys(catTotals);
-  const values = Object.values(catTotals);
+    const catTotals = {};
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-  // Gerador Dinâmico de Paleta de Cores em HSL para N Categorias
-  const generatePalette = (count) => {
-    const baseColors = ['#7C3AED', '#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#6366F1', '#14B8A6', '#8B5CF6', '#F97316', '#06B6D4'];
-    if (count <= baseColors.length) return baseColors.slice(0, count);
+    //  Percorre todas as transações (Conta + Cartão de Crédito)
+    AppState.transactions.forEach(tx => {
+      // Apenas Despesas
+      if (tx.tipo !== 'Despesa') return;
 
-    const colors = [];
-    for (let i = 0; i < count; i++) {
-      const hue = (i * 360 / count) % 360;
-      colors.push(`hsl(${hue}, 70%, 60%)`);
-    }
-    return colors;
-  };
+      // Ignora a linha consolidada do cartão para não duplicar valores
+      if (tx.sourceType === 'cartao_consolidado') return;
 
-  const palette = categories.length > 0 ? generatePalette(categories.length) : ['#374151'];
+      // Converte a data garantindo o fuso horário correto (T00:00:00)
+      const dateStr = tx.data ? tx.data.split('T')[0] : '';
+      if (!dateStr) return;
 
-  //  Renderiza o Chart.js
-  AppState.charts.category = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: categories.length > 0 ? categories : ['Sem despesas'],
-      datasets: [{
-        data: values.length > 0 ? values : [1],
-        backgroundColor: palette,
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const label = context.label || '';
-              const value = context.parsed || 0;
-              return ` ${label}: ${formatCurrency(value)}`;
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const txDate = new Date(y, m - 1, d);
+
+      // Valida se pertence ao Mês e Ano Vigente
+      if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
+        const cat = tx.categoria || 'Outros';
+        catTotals[cat] = (catTotals[cat] || 0) + Number(tx.valor || 0);
+      }
+    });
+
+    const categories = Object.keys(catTotals);
+    const values = Object.values(catTotals);
+
+    // Gerador Dinâmico de Paleta de Cores em HSL para N Categorias
+    const generatePalette = (count) => {
+      const baseColors = ['#7C3AED', '#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#6366F1', '#14B8A6', '#8B5CF6', '#F97316', '#06B6D4'];
+      if (count <= baseColors.length) return baseColors.slice(0, count);
+
+      const colors = [];
+      for (let i = 0; i < count; i++) {
+        const hue = (i * 360 / count) % 360;
+        colors.push(`hsl(${hue}, 70%, 60%)`);
+      }
+      return colors;
+    };
+
+    const palette = categories.length > 0 ? generatePalette(categories.length) : ['#374151'];
+
+    //  Renderiza o Chart.js
+    AppState.charts.category = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: categories.length > 0 ? categories : ['Sem despesas'],
+        datasets: [{
+          data: values.length > 0 ? values : [1],
+          backgroundColor: palette,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (context) {
+                const label = context.label || '';
+                const value = context.parsed || 0;
+                return ` ${label}: ${formatCurrency(value)}`;
+              }
             }
           }
-        }
-      },
-      cutout: '72%'
-    }
-  });
+        },
+        cutout: '72%'
+      }
+    });
 
-  // Renderiza a Legenda Detalhada na Interface
-  const legendList = document.getElementById('category-legend-list');
-  if (legendList) {
-    if (categories.length === 0) {
-      legendList.innerHTML = `<p class="text-muted" style="font-size:0.8rem; text-align:center; padding:0.5rem;">Sem despesas lançadas no mês.</p>`;
-    } else {
-      legendList.innerHTML = categories.map((cat, idx) => `
+    // Renderiza a Legenda Detalhada na Interface
+    const legendList = document.getElementById('category-legend-list');
+    if (legendList) {
+      if (categories.length === 0) {
+        legendList.innerHTML = `<p class="text-muted" style="font-size:0.8rem; text-align:center; padding:0.5rem;">Sem despesas lançadas no mês.</p>`;
+      } else {
+        legendList.innerHTML = categories.map((cat, idx) => `
         <div class="category-legend-row">
           <span class="legend-item">
             <span class="legend-dot" style="background:${palette[idx]};"></span>
@@ -523,29 +576,29 @@ function setupEventListeners() {
           </strong>
         </div>
       `).join('');
+      }
     }
   }
-}
-  
- // Renderiza o Patrimônio Total, a lista de Contas Bancárias e os Cards de Cartão de Crédito.
- 
-function renderAccountsAndCards() {
-  // Calcula o Patrimônio Total
-  const totalPatrimonio = AppState.accounts.reduce((acc, a) => acc + Number(a.saldo || 0), 0);
 
-  const elemTotalPatrimonio = document.getElementById('contas-patrimonio-total');
-  const elemContasAtivas = document.getElementById('contas-ativas-count');
+  // Renderiza o Patrimônio Total, a lista de Contas Bancárias e os Cards de Cartão de Crédito.
 
-  if (elemTotalPatrimonio) elemTotalPatrimonio.innerText = formatCurrency(totalPatrimonio);
-  if (elemContasAtivas) elemContasAtivas.innerText = `${AppState.accounts.length} contas ativas`;
+  function renderAccountsAndCards() {
+    // Calcula o Patrimônio Total
+    const totalPatrimonio = AppState.accounts.reduce((acc, a) => acc + Number(a.saldo || 0), 0);
 
-  // Renderiza a Grid de Contas Bancárias
-  const accountsGrid = document.getElementById('accounts-grid');
-  if (accountsGrid) {
-    if (AppState.accounts.length === 0) {
-      accountsGrid.innerHTML = `<p class="text-muted">Nenhuma conta cadastrada.</p>`;
-    } else {
-      accountsGrid.innerHTML = AppState.accounts.map(acc => `
+    const elemTotalPatrimonio = document.getElementById('contas-patrimonio-total');
+    const elemContasAtivas = document.getElementById('contas-ativas-count');
+
+    if (elemTotalPatrimonio) elemTotalPatrimonio.innerText = formatCurrency(totalPatrimonio);
+    if (elemContasAtivas) elemContasAtivas.innerText = `${AppState.accounts.length} contas ativas`;
+
+    // Renderiza a Grid de Contas Bancárias
+    const accountsGrid = document.getElementById('accounts-grid');
+    if (accountsGrid) {
+      if (AppState.accounts.length === 0) {
+        accountsGrid.innerHTML = `<p class="text-muted">Nenhuma conta cadastrada.</p>`;
+      } else {
+        accountsGrid.innerHTML = AppState.accounts.map(acc => `
         <div class="account-card">
           <div class="tx-item-flex">
             <div class="tx-icon-box"><i class="${getAccountIcon(acc.tipo)}"></i></div>
@@ -559,24 +612,24 @@ function renderAccountsAndCards() {
           </div>
         </div>
       `).join('');
+      }
     }
-  }
 
-  // Renderiza a Grid de Cartões de Crédito (Exibindo a Fatura do Mês Correta)
-  const cardsGrid = document.getElementById('cards-grid');
-  if (cardsGrid) {
-    if (AppState.cards.length === 0) {
-      cardsGrid.innerHTML = `<p class="text-muted">Nenhum cartão cadastrado.</p>`;
-    } else {
-      cardsGrid.innerHTML = AppState.cards.map(card => {
-        // Fatura apenas do mês vigente
-        const faturaMesAtual = calculateCurrentCardInvoice(card.nome);
-        // Limite total comprometido por todas as parcelas pendentes
-        const totalComprometido = calculateTotalCardCommitted(card.nome);
-        
-        const percentUsed = Math.min((totalComprometido / card.limite) * 100, 100);
+    // Renderiza a Grid de Cartões de Crédito (Exibindo a Fatura do Mês Correta)
+    const cardsGrid = document.getElementById('cards-grid');
+    if (cardsGrid) {
+      if (AppState.cards.length === 0) {
+        cardsGrid.innerHTML = `<p class="text-muted">Nenhum cartão cadastrado.</p>`;
+      } else {
+        cardsGrid.innerHTML = AppState.cards.map(card => {
+          // Fatura apenas do mês vigente
+          const faturaMesAtual = calculateCurrentCardInvoice(card.nome);
+          // Limite total comprometido por todas as parcelas pendentes
+          const totalComprometido = calculateTotalCardCommitted(card.nome);
 
-        return `
+          const percentUsed = Math.min((totalComprometido / card.limite) * 100, 100);
+
+          return `
           <div class="credit-card-item ${card.estilo || 'card-purple'}" onclick="selectCardForDetails('${card.id}')">
             <div class="credit-card-top">
               <span style="font-weight:700;">${card.nome}</span>
@@ -594,63 +647,63 @@ function renderAccountsAndCards() {
             </div>
           </div>
         `;
-      }).join('');
+        }).join('');
+      }
+    }
+
+    //  Se houver um cartão selecionado, atualiza o painel de detalhes abaixo
+    if (AppState.selectedCardId) {
+      selectCardForDetails(AppState.selectedCardId);
+    } else if (AppState.cards.length > 0) {
+      selectCardForDetails(AppState.cards[0].id);
     }
   }
 
-  //  Se houver um cartão selecionado, atualiza o painel de detalhes abaixo
-  if (AppState.selectedCardId) {
-    selectCardForDetails(AppState.selectedCardId);
-  } else if (AppState.cards.length > 0) {
-    selectCardForDetails(AppState.cards[0].id);
-  }
-}
-
   function selectCardForDetails(cardId) {
-  AppState.selectedCardId = cardId;
-  const card = AppState.cards.find(c => String(c.id) === String(cardId));
-  if (!card) return;
+    AppState.selectedCardId = cardId;
+    const card = AppState.cards.find(c => String(c.id) === String(cardId));
+    if (!card) return;
 
-  // Fatura do mês atual
-  const faturaMesAtual = calculateCurrentCardInvoice(card.nome);
-  // Total comprometido (todas as parcelas pendentes)
-  const limiteUsado = calculateTotalCardCommitted(card.nome);
-  // Limite disponível real
-  const disponivel = Math.max(card.limite - limiteUsado, 0);
+    // Fatura do mês atual
+    const faturaMesAtual = calculateCurrentCardInvoice(card.nome);
+    // Total comprometido (todas as parcelas pendentes)
+    const limiteUsado = calculateTotalCardCommitted(card.nome);
+    // Limite disponível real
+    const disponivel = Math.max(card.limite - limiteUsado, 0);
 
-  const elemCardName = document.getElementById('invoice-card-name');
-  const elemCardSub = document.getElementById('invoice-card-subtitle');
-  const elemLimiteTotal = document.getElementById('inv-limite-total');
-  const elemLimiteUsado = document.getElementById('inv-limite-usado');
-  const elemLimiteDisp = document.getElementById('inv-limite-disponivel');
-  const elemVencimento = document.getElementById('inv-vencimento');
+    const elemCardName = document.getElementById('invoice-card-name');
+    const elemCardSub = document.getElementById('invoice-card-subtitle');
+    const elemLimiteTotal = document.getElementById('inv-limite-total');
+    const elemLimiteUsado = document.getElementById('inv-limite-usado');
+    const elemLimiteDisp = document.getElementById('inv-limite-disponivel');
+    const elemVencimento = document.getElementById('inv-vencimento');
 
-  if (elemCardName) elemCardName.innerText = card.nome;
-  if (elemCardSub) elemCardSub.innerText = `Detalhes da fatura · Fechamento dia ${card.fechamento}`;
-  if (elemLimiteTotal) elemLimiteTotal.innerText = formatCurrency(card.limite);
-  if (elemLimiteUsado) elemLimiteUsado.innerText = formatCurrency(limiteUsado);
-  if (elemLimiteDisp) elemLimiteDisp.innerText = formatCurrency(disponivel);
-  if (elemVencimento) elemVencimento.innerText = `Dia ${card.vencimento}`;
-}
+    if (elemCardName) elemCardName.innerText = card.nome;
+    if (elemCardSub) elemCardSub.innerText = `Detalhes da fatura · Fechamento dia ${card.fechamento}`;
+    if (elemLimiteTotal) elemLimiteTotal.innerText = formatCurrency(card.limite);
+    if (elemLimiteUsado) elemLimiteUsado.innerText = formatCurrency(limiteUsado);
+    if (elemLimiteDisp) elemLimiteDisp.innerText = formatCurrency(disponivel);
+    if (elemVencimento) elemVencimento.innerText = `Dia ${card.vencimento}`;
+  }
 
   function renderTransactionsTable() {
-  const listBody = document.getElementById('full-transactions-list');
-  if (!listBody) return;
+    const listBody = document.getElementById('full-transactions-list');
+    if (!listBody) return;
 
-  const filtered = filterTransactions(AppState.transactions);
-  document.getElementById('transactions-count-label').innerText = `${filtered.length} transações encontradas`;
+    const filtered = filterTransactions(AppState.transactions);
+    document.getElementById('transactions-count-label').innerText = `${filtered.length} transações encontradas`;
 
-  if (filtered.length === 0) {
-    listBody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center; padding:2rem;">Nenhum lançamento encontrado.</td></tr>`;
-    return;
-  }
+    if (filtered.length === 0) {
+      listBody.innerHTML = `<tr><td colspan="6" class="text-muted" style="text-align:center; padding:2rem;">Nenhum lançamento encontrado.</td></tr>`;
+      return;
+    }
 
-  listBody.innerHTML = filtered.map(tx => {
-    const isNegative = tx.tipo === 'Despesa';
-    const isConsolidatedInvoice = tx.sourceType === 'cartao_consolidado';
-    const valorClass = isNegative ? 'text-danger' : 'text-success';
+    listBody.innerHTML = filtered.map(tx => {
+      const isNegative = tx.tipo === 'Despesa';
+      const isConsolidatedInvoice = tx.sourceType === 'cartao_consolidado';
+      const valorClass = isNegative ? 'text-danger' : 'text-success';
 
-    return `
+      return `
       <tr class="${isConsolidatedInvoice ? 'row-fatura-consolidada' : ''}">
         <td>
           <div class="tx-item-flex">
@@ -664,9 +717,9 @@ function renderAccountsAndCards() {
           </div>
         </td>
         <td>
-          ${isConsolidatedInvoice 
-            ? `<span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:4px;">Fatura Consolidada</span>` 
-            : tx.categoria}
+          ${isConsolidatedInvoice
+          ? `<span class="badge" style="background:var(--primary-light); color:var(--primary); font-size:0.75rem; padding:0.2rem 0.5rem; border-radius:4px;">Fatura Consolidada</span>`
+          : tx.categoria}
         </td>
         <td class="${valorClass} value-masked ${AppState.userProfile.hideBalances ? 'masked' : ''}">
           -${formatCurrency(tx.valor)}
@@ -690,40 +743,40 @@ function renderAccountsAndCards() {
         </td>
       </tr>
     `;
-  }).join('');
-}
+    }).join('');
+  }
 
 
-// Abre o Modal de Pagamento da Fatura pré-preenchido.
+  // Abre o Modal de Pagamento da Fatura pré-preenchido.
 
-function openPayInvoiceModal(txId, descricao, valor) {
-  document.getElementById('pay-invoice-tx-id').value = txId;
-  document.getElementById('pay-invoice-desc').value = descricao;
-  document.getElementById('pay-invoice-valor').value = valor;
-  
-  // Atualiza as opções do select antes de abrir a tela
-  updateOptionsSelects();
+  function openPayInvoiceModal(txId, descricao, valor) {
+    document.getElementById('pay-invoice-tx-id').value = txId;
+    document.getElementById('pay-invoice-desc').value = descricao;
+    document.getElementById('pay-invoice-valor').value = valor;
 
-  openModal('modal-pagar-fatura');
-}
+    // Atualiza as opções do select antes de abrir a tela
+    updateOptionsSelects();
+
+    openModal('modal-pagar-fatura');
+  }
 
 
-// Event Listener do Formulário de Pagamento da Fatura
- 
-document.getElementById('form-pagar-fatura')?.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const payload = {
-    txId: document.getElementById('pay-invoice-tx-id').value,
-    contaPagadora: document.getElementById('pay-invoice-conta').value,
-    valor: parseFloat(document.getElementById('pay-invoice-valor').value)
-  };
+  // Event Listener do Formulário de Pagamento da Fatura
 
-  showLoader('Processando pagamento da fatura...');
-  executeServerCall('pagarFaturaConsolidada', payload, () => {
-    closeModal();
-    initApp(false);
+  document.getElementById('form-pagar-fatura')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const payload = {
+      txId: document.getElementById('pay-invoice-tx-id').value,
+      contaPagadora: document.getElementById('pay-invoice-conta').value,
+      valor: parseFloat(document.getElementById('pay-invoice-valor').value)
+    };
+
+    showLoader('Processando pagamento da fatura...');
+    executeServerCall('pagarFaturaConsolidada', payload, () => {
+      closeModal();
+      initApp(false);
+    });
   });
-});
 
   function renderGoalsAndBudgets() {
     const goalsGrid = document.getElementById('goals-grid');
@@ -823,7 +876,7 @@ document.getElementById('form-pagar-fatura')?.addEventListener('submit', (e) => 
 
     const totalGoals = AppState.goals.length;
     const totalAcc = AppState.goals.reduce((acc, g) => acc + Number(g.acumulado || 0), 0);
-    const avgProgress = totalGoals > 0 
+    const avgProgress = totalGoals > 0
       ? (AppState.goals.reduce((acc, g) => acc + (g.acumulado / g.alvo), 0) / totalGoals * 100).toFixed(0)
       : 0;
 
@@ -879,7 +932,7 @@ document.getElementById('form-pagar-fatura')?.addEventListener('submit', (e) => 
           executeServerCall(serverMethod, payload, () => {
             form.reset();
             closeModal();
-            initApp(false); 
+            initApp(false);
           });
         });
       }
@@ -959,126 +1012,178 @@ document.getElementById('form-pagar-fatura')?.addEventListener('submit', (e) => 
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    let receitas = 0;
-    let despesas = 0;
+    const prevDate = new Date(currentYear, currentMonth - 1, 1);
+    const prevMonth = prevDate.getMonth();
+    const prevYear = prevDate.getFullYear();
+
+    let receitasAtual = 0;
+    let receitasAnterior = 0;
+    let despesasAtual = 0;
+    let despesasAnterior = 0;
+    let cartaoAtual = 0;
+    let cartaoAnterior = 0;
 
     AppState.transactions.forEach(tx => {
-      const d = new Date(tx.data);
-      if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-        if (tx.tipo === 'Receita') receitas += Number(tx.valor);
-        if (tx.tipo === 'Despesa') despesas += Number(tx.valor);
+      // Aba Transacoes: Coluna E (Tipo), Coluna D (Data)
+      if (tx.sourceType !== 'cartao_parcela') {
+        const parts = (tx.data || '').split('T')[0].split('-');
+        if (parts.length >= 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+
+          if (y === currentYear && m === currentMonth) {
+            if (tx.tipo === 'Receita') receitasAtual += Number(tx.valor || 0);
+            if (tx.tipo === 'Despesa') despesasAtual += Number(tx.valor || 0);
+          } else if (y === prevYear && m === prevMonth) {
+            if (tx.tipo === 'Receita') receitasAnterior += Number(tx.valor || 0);
+            if (tx.tipo === 'Despesa') despesasAnterior += Number(tx.valor || 0);
+          }
+        }
+      }
+
+      // Aba Faturas_Cartao:
+      if (tx.sourceType === 'cartao_parcela') {
+        const dataVenc = tx.dataVencimento || tx.dataFechamento || tx.data;
+        const parts = (dataVenc || '').split('T')[0].split('-');
+        if (parts.length >= 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+
+          if (y === currentYear && m === currentMonth && tx.status === 'Pendente') {
+            cartaoAtual += Number(tx.valor || 0);
+          } else if (y === prevYear && m === prevMonth) {
+            cartaoAnterior += Number(tx.valor || 0);
+          }
+        }
       }
     });
 
-    return { patrimonio, receitas, despesas, balanco: receitas - despesas };
+    const calcTrend = (curr, prev) => {
+      if (prev === 0) return curr === 0 ? 0 : (curr > 0 ? 100 : -100);
+      return ((curr - prev) / prev) * 100;
+    };
+
+    const cartaoTrend = cartaoAnterior > 0
+      ? ((cartaoAtual - cartaoAnterior) / cartaoAnterior) * 100
+      : 0;
+
+    return {
+      patrimonio,
+      receitas: receitasAtual,
+      receitasTrend: calcTrend(receitasAtual, receitasAnterior),
+      despesas: despesasAtual,
+      despesasTrend: calcTrend(despesasAtual, despesasAnterior),
+      despesasCartao: cartaoAtual,
+      despesasCartaoTrend: cartaoTrend
+    };
   }
 
-function calculateCurrentCardInvoice(cardName) {
-  if (!AppState.transactions || AppState.transactions.length === 0) return 0;
+  function calculateCurrentCardInvoice(cardName) {
+    if (!AppState.transactions || AppState.transactions.length === 0) return 0;
 
-  // Verifica se já existe uma Fatura Consolidada pendente para este cartão no mês
-  const faturaConsolidada = AppState.transactions.find(tx =>
-    tx.conta === cardName &&
-    tx.sourceType === 'cartao_consolidado' &&
-    tx.status === 'Pendente'
-  );
+    // Verifica se já existe uma Fatura Consolidada pendente para este cartão no mês
+    const faturaConsolidada = AppState.transactions.find(tx =>
+      tx.conta === cardName &&
+      tx.sourceType === 'cartao_consolidado' &&
+      tx.status === 'Pendente'
+    );
 
-  if (faturaConsolidada) {
-    return Number(faturaConsolidada.valor || 0);
+    if (faturaConsolidada) {
+      return Number(faturaConsolidada.valor || 0);
+    }
+
+    // Determina o Mês/Ano atual de referência (com base na data de hoje)
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+
+    //  Soma apenas as parcelas pendentes que pertencem ao ciclo do mês atual
+    return AppState.transactions
+      .filter(tx => {
+        if (tx.conta !== cardName || tx.status !== 'Pendente') return false;
+
+        // Utiliza a Data de Fechamento ou Vencimento da parcela
+        const dataRefStr = tx.dataFechamento || tx.dataVencimento || tx.data;
+        if (!dataRefStr) return false;
+
+        const dt = new Date(dataRefStr + 'T00:00:00');
+        return dt.getMonth() === mesAtual && dt.getFullYear() === anoAtual;
+      })
+      .reduce((sum, tx) => sum + Number(tx.valor || 0), 0);
   }
 
-  // Determina o Mês/Ano atual de referência (com base na data de hoje)
-  const hoje = new Date();
-  const mesAtual = hoje.getMonth();
-  const anoAtual = hoje.getFullYear();
+  function calculateTotalCardCommitted(cardName) {
+    if (!AppState.transactions || AppState.transactions.length === 0) return 0;
 
-  //  Soma apenas as parcelas pendentes que pertencem ao ciclo do mês atual
-  return AppState.transactions
-    .filter(tx => {
-      if (tx.conta !== cardName || tx.status !== 'Pendente') return false;
+    return AppState.transactions
+      .filter(tx => tx.conta === cardName && tx.status === 'Pendente')
+      .reduce((sum, tx) => sum + Number(tx.valor || 0), 0);
+  }
 
-      // Utiliza a Data de Fechamento ou Vencimento da parcela
-      const dataRefStr = tx.dataFechamento || tx.dataVencimento || tx.data;
-      if (!dataRefStr) return false;
+  //Calcula o consumo mensal da Categoria (Despesas em Conta + Compras de Cartão)
 
-      const dt = new Date(dataRefStr + 'T00:00:00');
-      return dt.getMonth() === mesAtual && dt.getFullYear() === anoAtual;
-    })
-    .reduce((sum, tx) => sum + Number(tx.valor || 0), 0);
-}
+  function calculateCategoryCurrentMonthSpent(category) {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-function calculateTotalCardCommitted(cardName) {
-  if (!AppState.transactions || AppState.transactions.length === 0) return 0;
+    return AppState.transactions.filter(tx => {
+      // Considera apenas Despesas
+      if (tx.tipo !== 'Despesa') return false;
 
-  return AppState.transactions
-    .filter(tx => tx.conta === cardName && tx.status === 'Pendente')
-    .reduce((sum, tx) => sum + Number(tx.valor || 0), 0);
-}
+      // Ignora o registro pai de fatura consolidada para não somar 2x
+      if (tx.sourceType === 'cartao_consolidado') return false;
 
-//Calcula o consumo mensal da Categoria (Despesas em Conta + Compras de Cartão)
+      //Compara a Categoria gravada na compra
+      if (tx.categoria !== category) return false;
 
-function calculateCategoryCurrentMonthSpent(category) {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
-  return AppState.transactions.filter(tx => {
-    // Considera apenas Despesas
-    if (tx.tipo !== 'Despesa') return false;
-
-    // Ignora o registro pai de fatura consolidada para não somar 2x
-    if (tx.sourceType === 'cartao_consolidado') return false;
-
-    //Compara a Categoria gravada na compra
-    if (tx.categoria !== category) return false;
-
-    //Compara se a compra pertence ao Mês/Ano atual
-    const d = new Date(tx.data + 'T00:00:00');
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  }).reduce((sum, tx) => sum + Number(tx.valor || 0), 0);
-}
-
-
-// Filtra a lista unificada de transações.
-
-function filterTransactions(list) {
-  return list.filter(tx => {
-    // 1. Filtro por Busca Textual
-    if (AppState.filters.search) {
-      const s = AppState.filters.search.toLowerCase();
-      const matchDesc = (tx.descricao || '').toLowerCase().includes(s);
-      const matchCat = (tx.categoria || '').toLowerCase().includes(s);
-      const matchConta = (tx.conta || '').toLowerCase().includes(s);
-      if (!matchDesc && !matchCat && !matchConta) return false;
-    }
-
-    // Filtro por Origem (Conta vs Cartão)
-    if (AppState.filters.source === 'conta') {
-      if (tx.sourceType !== 'conta') return false;
-    }
-    if (AppState.filters.source === 'cartao') {
-      // Exibe tanto as compras parceladas individuais quanto a fatura consolidada do cartão
-      if (tx.sourceType !== 'cartao_parcela' && tx.sourceType !== 'cartao_consolidado') return false;
-    }
-    
-    if (AppState.filters.source === 'month') {
+      //Compara se a compra pertence ao Mês/Ano atual
       const d = new Date(tx.data + 'T00:00:00');
-      const now = new Date();
-      if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
-    }
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    }).reduce((sum, tx) => sum + Number(tx.valor || 0), 0);
+  }
 
-    // Filtros de Tipo, Status e Categoria
-    if (AppState.filters.type !== 'all' && tx.tipo !== AppState.filters.type) return false;
-    if (AppState.filters.status !== 'all' && tx.status !== AppState.filters.status) return false;
-    
-    // Ignora o filtro rígido de categoria se for a Fatura Consolidada (categoria: "Cartão de Crédito")
-    if (AppState.filters.category !== 'all' && tx.sourceType !== 'cartao_consolidado' && tx.categoria !== AppState.filters.category) {
-      return false;
-    }
 
-    return true;
-  });
-}
+  // Filtra a lista unificada de transações.
+
+  function filterTransactions(list) {
+    return list.filter(tx => {
+      // 1. Filtro por Busca Textual
+      if (AppState.filters.search) {
+        const s = AppState.filters.search.toLowerCase();
+        const matchDesc = (tx.descricao || '').toLowerCase().includes(s);
+        const matchCat = (tx.categoria || '').toLowerCase().includes(s);
+        const matchConta = (tx.conta || '').toLowerCase().includes(s);
+        if (!matchDesc && !matchCat && !matchConta) return false;
+      }
+
+      // Filtro por Origem (Conta vs Cartão)
+      if (AppState.filters.source === 'conta') {
+        if (tx.sourceType !== 'conta') return false;
+      }
+      if (AppState.filters.source === 'cartao') {
+        // Exibe tanto as compras parceladas individuais quanto a fatura consolidada do cartão
+        if (tx.sourceType !== 'cartao_parcela' && tx.sourceType !== 'cartao_consolidado') return false;
+      }
+
+      if (AppState.filters.source === 'month') {
+        const d = new Date(tx.data + 'T00:00:00');
+        const now = new Date();
+        if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+      }
+
+      // Filtros de Tipo, Status e Categoria
+      if (AppState.filters.type !== 'all' && tx.tipo !== AppState.filters.type) return false;
+      if (AppState.filters.status !== 'all' && tx.status !== AppState.filters.status) return false;
+
+      // Ignora o filtro rígido de categoria se for a Fatura Consolidada (categoria: "Cartão de Crédito")
+      if (AppState.filters.category !== 'all' && tx.sourceType !== 'cartao_consolidado' && tx.categoria !== AppState.filters.category) {
+        return false;
+      }
+
+      return true;
+    });
+  }
   function setPrivacyMask(hide, saveToBackend = true) {
     AppState.userProfile.hideBalances = hide;
     document.querySelectorAll('.value-masked').forEach(el => {
@@ -1120,37 +1225,37 @@ function filterTransactions(list) {
   }
 
 
-// Atualiza os elementos <select> da aplicação com as contas bancárias e cartões disponíveis em AppState.
+  // Atualiza os elementos <select> da aplicação com as contas bancárias e cartões disponíveis em AppState.
 
-function updateOptionsSelects() {
-  const selectOrigemTx = document.getElementById('tx-origem');
-  const selectOrigemTransf = document.getElementById('transf-origem');
-  const selectDestinoTransf = document.getElementById('transf-destino');
-  const selectMetaConta = document.getElementById('meta-conta-origem');
-  const selectDepConta = document.getElementById('deposito-conta-origem');
-  const selectReembolso = document.getElementById('excluir-meta-conta-reembolso');
-  
-  // Elemento do Modal de Pagamento de Fatura
-  const selectPayInvoiceConta = document.getElementById('pay-invoice-conta');
+  function updateOptionsSelects() {
+    const selectOrigemTx = document.getElementById('tx-origem');
+    const selectOrigemTransf = document.getElementById('transf-origem');
+    const selectDestinoTransf = document.getElementById('transf-destino');
+    const selectMetaConta = document.getElementById('meta-conta-origem');
+    const selectDepConta = document.getElementById('deposito-conta-origem');
+    const selectReembolso = document.getElementById('excluir-meta-conta-reembolso');
 
-  const optionsAccounts = AppState.accounts.map(a => 
-    `<option value="${a.nome}">${a.nome} (${a.tipo}) - Saldo: ${formatCurrency(a.saldo)}</option>`
-  ).join('');
+    // Elemento do Modal de Pagamento de Fatura
+    const selectPayInvoiceConta = document.getElementById('pay-invoice-conta');
 
-  const optionsCards = AppState.cards.map(c => 
-    `<option value="${c.nome}">${c.nome} (Cartão)</option>`
-  ).join('');
+    const optionsAccounts = AppState.accounts.map(a =>
+      `<option value="${a.nome}">${a.nome} (${a.tipo}) - Saldo: ${formatCurrency(a.saldo)}</option>`
+    ).join('');
 
-  if (selectOrigemTx) selectOrigemTx.innerHTML = `<optgroup label="Contas Bancárias">${optionsAccounts}</optgroup><optgroup label="Cartões de Crédito">${optionsCards}</optgroup>`;
-  if (selectOrigemTransf) selectOrigemTransf.innerHTML = optionsAccounts;
-  if (selectDestinoTransf) selectDestinoTransf.innerHTML = optionsAccounts;
-  if (selectMetaConta) selectMetaConta.innerHTML = optionsAccounts;
-  if (selectDepConta) selectDepConta.innerHTML = optionsAccounts;
-  if (selectReembolso) selectReembolso.innerHTML = optionsAccounts;
+    const optionsCards = AppState.cards.map(c =>
+      `<option value="${c.nome}">${c.nome} (Cartão)</option>`
+    ).join('');
 
-  // Atualiza as opções do modal de pagamento da fatura
-  if (selectPayInvoiceConta) selectPayInvoiceConta.innerHTML = optionsAccounts;
-}
+    if (selectOrigemTx) selectOrigemTx.innerHTML = `<optgroup label="Contas Bancárias">${optionsAccounts}</optgroup><optgroup label="Cartões de Crédito">${optionsCards}</optgroup>`;
+    if (selectOrigemTransf) selectOrigemTransf.innerHTML = optionsAccounts;
+    if (selectDestinoTransf) selectDestinoTransf.innerHTML = optionsAccounts;
+    if (selectMetaConta) selectMetaConta.innerHTML = optionsAccounts;
+    if (selectDepConta) selectDepConta.innerHTML = optionsAccounts;
+    if (selectReembolso) selectReembolso.innerHTML = optionsAccounts;
+
+    // Atualiza as opções do modal de pagamento da fatura
+    if (selectPayInvoiceConta) selectPayInvoiceConta.innerHTML = optionsAccounts;
+  }
 
   function renderRecentTransactionsDashboard() {
     const container = document.getElementById('dash-recent-transactions-list');
@@ -1332,77 +1437,77 @@ function updateOptionsSelects() {
 
 
   // Inicializa o mês atual no estado global se não existir
-if (!AppState.selectedInvoiceMonth) {
-  const d = new Date();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  AppState.selectedInvoiceMonth = `${d.getFullYear()}-${m}`;
-}
+  if (!AppState.selectedInvoiceMonth) {
+    const d = new Date();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    AppState.selectedInvoiceMonth = `${d.getFullYear()}-${m}`;
+  }
 
 
-// Alterna a exibição da fatura completa abaixo do card
+  // Alterna a exibição da fatura completa abaixo do card
 
-function toggleFullInvoiceDetails() {
-  const container = document.getElementById('full-invoice-expanded-container');
-  const icon = document.getElementById('icon-toggle-invoice');
-  const monthInput = document.getElementById('invoice-month-select');
+  function toggleFullInvoiceDetails() {
+    const container = document.getElementById('full-invoice-expanded-container');
+    const icon = document.getElementById('icon-toggle-invoice');
+    const monthInput = document.getElementById('invoice-month-select');
 
-  if (!container) return;
+    if (!container) return;
 
-  const isHidden = container.classList.contains('hidden');
-  if (isHidden) {
-    container.classList.remove('hidden');
-    if (icon) icon.classList.add('rotated');
-    
-    if (monthInput) {
-      monthInput.value = AppState.selectedInvoiceMonth;
+    const isHidden = container.classList.contains('hidden');
+    if (isHidden) {
+      container.classList.remove('hidden');
+      if (icon) icon.classList.add('rotated');
+
+      if (monthInput) {
+        monthInput.value = AppState.selectedInvoiceMonth;
+      }
+      renderCardInvoiceItems();
+    } else {
+      container.classList.add('hidden');
+      if (icon) icon.classList.remove('rotated');
     }
+  }
+
+  function onInvoiceMonthChange(monthValue) {
+    if (!monthValue) return;
+    AppState.selectedInvoiceMonth = monthValue;
     renderCardInvoiceItems();
-  } else {
-    container.classList.add('hidden');
-    if (icon) icon.classList.remove('rotated');
-  }
-}
-
-function onInvoiceMonthChange(monthValue) {
-  if (!monthValue) return;
-  AppState.selectedInvoiceMonth = monthValue;
-  renderCardInvoiceItems();
-}
-
-
-// Renderiza os itens da fatura do cartão selecionado para o mês filtrado
-
-function renderCardInvoiceItems() {
-  const tbody = document.getElementById('invoice-items-table-body');
-  if (!tbody) return;
-
-  const card = AppState.cards.find(c => String(c.id) === String(AppState.selectedCardId));
-  if (!card) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center; padding:1.5rem;">Selecione um cartão para visualizar os itens.</td></tr>`;
-    return;
   }
 
-  const [yearStr, monthStr] = AppState.selectedInvoiceMonth.split('-');
-  const targetYear = parseInt(yearStr, 10);
-  const targetMonth = parseInt(monthStr, 10) - 1; 
 
-  // Filtra as compras do cartão selecionado que caem no mês/ano de fechamento/vencimento
-  const items = AppState.transactions.filter(tx => {
-    if (tx.conta !== card.nome) return false;
-    if (tx.sourceType !== 'cartao_parcela') return false;
+  // Renderiza os itens da fatura do cartão selecionado para o mês filtrado
 
-    // Compara a data de fechamento ou vencimento da parcela
-    const dt = new Date((tx.dataFechamento || tx.data) + 'T00:00:00');
-    return dt.getMonth() === targetMonth && dt.getFullYear() === targetYear;
-  });
+  function renderCardInvoiceItems() {
+    const tbody = document.getElementById('invoice-items-table-body');
+    if (!tbody) return;
 
-  if (items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center; padding:1.5rem;">Nenhum item encontrado na fatura de ${monthStr}/${yearStr}.</td></tr>`;
-    return;
-  }
+    const card = AppState.cards.find(c => String(c.id) === String(AppState.selectedCardId));
+    if (!card) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center; padding:1.5rem;">Selecione um cartão para visualizar os itens.</td></tr>`;
+      return;
+    }
 
-  // Renderiza as compras da fatura
-  tbody.innerHTML = items.map(item => `
+    const [yearStr, monthStr] = AppState.selectedInvoiceMonth.split('-');
+    const targetYear = parseInt(yearStr, 10);
+    const targetMonth = parseInt(monthStr, 10) - 1;
+
+    // Filtra as compras do cartão selecionado que caem no mês/ano de fechamento/vencimento
+    const items = AppState.transactions.filter(tx => {
+      if (tx.conta !== card.nome) return false;
+      if (tx.sourceType !== 'cartao_parcela') return false;
+
+      // Compara a data de fechamento ou vencimento da parcela
+      const dt = new Date((tx.dataFechamento || tx.data) + 'T00:00:00');
+      return dt.getMonth() === targetMonth && dt.getFullYear() === targetYear;
+    });
+
+    if (items.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align:center; padding:1.5rem;">Nenhum item encontrado na fatura de ${monthStr}/${yearStr}.</td></tr>`;
+      return;
+    }
+
+    // Renderiza as compras da fatura
+    tbody.innerHTML = items.map(item => `
     <tr>
       <td>
         <div class="tx-item-flex">
@@ -1418,18 +1523,18 @@ function renderCardInvoiceItems() {
       </td>
     </tr>
   `).join('');
-}
-
-
-// Atualiza a função nativa de seleção do cartão para atualizar também a lista de itens se o painel estiver aberto
-
-const originalSelectCardForDetails = selectCardForDetails;
-selectCardForDetails = function(cardId) {
-  originalSelectCardForDetails(cardId);
-  
-  const container = document.getElementById('full-invoice-expanded-container');
-  if (container && !container.classList.contains('hidden')) {
-    renderCardInvoiceItems();
   }
-};
+
+
+  // Atualiza a função nativa de seleção do cartão para atualizar também a lista de itens se o painel estiver aberto
+
+  const originalSelectCardForDetails = selectCardForDetails;
+  selectCardForDetails = function (cardId) {
+    originalSelectCardForDetails(cardId);
+
+    const container = document.getElementById('full-invoice-expanded-container');
+    if (container && !container.classList.contains('hidden')) {
+      renderCardInvoiceItems();
+    }
+  };
 </script>
