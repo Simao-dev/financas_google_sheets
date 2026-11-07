@@ -1,0 +1,159 @@
+:root {
+  /* Cores Principais / Brand */
+  --color-primary: #6338f6;          /* Roxo principal dos botões e destaques */
+  --color-primary-hover: #522bd6;    /* Tom ligeiramente mais escuro para hover */
+  --color-primary-light: #ece8fe;    /* Fundo ativo do menu e ícones */
+
+  /* Cores Semânticas / Status */
+  --color-success: #10b981;          /* Verde para receitas, lucros e tags */
+  --color-success-light: #e6f7f0;    /* Fundo suave de cards/tags de sucesso */
+  
+  --color-danger: #f43f5e;           /* Vermelho/rosa para despesas */
+  --color-danger-light: #ffeef1;     /* Fundo suave de despesas */
+
+  --color-warning: #f59e0b;          /* Laranja para barras de progresso e alertas */
+  --color-warning-light: #fef3c7;    /* Alertas suaves */
+
+  /* Gráficos / Categorias */
+  --color-chart-moradia: #6338f6;     /* Roxo */
+  --color-chart-alimentacao: #10b981; /* Verde */
+  --color-chart-transporte: #3b82f6;  /* Azul */
+  --color-chart-saude: #f43f5e;       /* Vermelho */
+  --color-chart-educacao: #94a3b8;    /* Cinza rosado/azulado */
+  --color-chart-outros: #06b6d4;      /* Ciano */
+
+  /* Neutros e Backgrounds */
+  --color-bg-main: #F8F9FC;          /* Fundo da tela */
+  --color-bg-card: #ffffff;          /* Fundo dos cards e barra lateral */
+  --color-bg-input: #f1f5f9;         /* Fundo de botões secundários / busca */
+
+  /* Tipografia / Textos */
+  --color-text-main: #0f172a;        /* Texto escuro principal */
+  --color-text-secondary: #64748b;   /* Subtítulos e textos secundários */
+  --color-text-muted: #94a3b8;       /* Labels apagados / placeholders */
+
+  /* Bordas e Divisores */
+  --color-border: #e2e8f0;           /* Bordas de cards e linhas */
+
+    /*Fontes*/
+    --font-family-primary: 'Inter', sans-serif;
+    --font-family-secondary: 'Outfit', sans-serif;
+}
+
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/*MENU LATERAL*/
+body{
+    background-color:var(--color-bg-main);
+}
+
+.menu{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width:250px;
+    height: 100vh;
+    background-color:var(--color-bg-card);
+    color:var(--color-text-secondary);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.menu-logo-pricipal{
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.menu-logo-container{
+    background-color:var(--color-primary);
+    color:var(--color-bg-card);
+    height: 40px;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+}
+
+.menu-logo-container{
+    font-family: var(--font-family-primary);
+    font-weight: 700;
+    font-size: 20px;
+}
+
+.container-menu{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+}
+
+.menu-logo{
+    color:var(--color-text-main);
+    font-family: var(--font-family-secondary);
+    font-size: 18px;
+}
+
+.menu-links{
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.menu-links li a{
+    font-family: var(--font-family-primary);
+    font-weight: 500;
+    font-size: 16px;
+    color:var(--color-text-secondary);
+    text-decoration: none;
+    padding: 10px;
+    border-radius: 8px;
+    display: block;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.menu-links li a i{
+    margin-right: 10px;
+}
+
+.menu-links button{
+    font-family: var(--font-family-primary);
+    font-weight: 500;
+    font-size: 16px;
+    color:var(--color-text-secondary);
+    width:200px;
+    text-decoration: none;
+    padding: 10px;
+    border-radius: 8px;
+    display: block;
+    transition: background-color 0.3s, color 0.3s;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.menu-links button i{
+    margin-right: 10px;
+}
+
+.menu-links button:hover{
+    background-color:var(--color-primary-light);
+    color:var(--color-primary);
+}
+
+.menu-links li a:hover{
+    background-color:var(--color-primary-light);
+    color:var(--color-primary);
+}
+
+/* MAIN CONTENT AREA */
